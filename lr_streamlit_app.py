@@ -79,3 +79,4 @@ if st.button("Predict"):
     prediction = model.predict(input_df)[0]
     result = "❌ Died within 10 Years" if prediction == 1 else "✅ Survived 10+ Years"
     st.subheader(f"Prediction: {result}")
+
