@@ -5,7 +5,7 @@ import joblib
 # Load the trained Logistic Regression model
 model = joblib.load("lr_model.pkl")
 
-# All features used during training (58 total in your dataset)
+# All features used during training
 feature_columns = [
     'Chemotherapy', 'ER status measured by IHC', 'ER Status', 'HER2 status measured by SNP6',
     'HER2 Status', 'Hormone Therapy', 'Inferred Menopausal State', 'Radio Therapy', 'PR Status',
@@ -37,7 +37,7 @@ st.title("Breast Cancer 10-Year Mortality Prediction (Logistic Regression)")
 
 st.write("This app predicts whether a breast cancer patient is likely to **survive beyond 10 years** after diagnosis.")
 
-# Collect inputs for key features
+# Collect user inputs for important features
 age = st.slider("Age at Diagnosis", 20, 100, 55)
 tumor_size = st.slider("Tumor Size (mm)", 0, 200, 30)
 lymph_nodes = st.slider("Positive Lymph Nodes", 0, 50, 2)
@@ -66,10 +66,16 @@ input_data = {
     "HER2 Status": her2_status
 }
 
-# Fill the rest of the features with 0
+# Fill missing features with 0
 for col in feature_columns:
     if col not in input_data:
         input_data[col] = 0
 
 # Convert to DataFrame in correct order
-input_df = pd.DataFrame([input_data])[feature_col_]()_]()_
+input_df = pd.DataFrame([input_data])[feature_columns]
+
+# Predict button
+if st.button("Predict"):
+    prediction = model.predict(input_df)[0]
+    result = "❌ Died within 10 Years" if prediction == 1 else "✅ Survived 10+ Years"
+    st.subheader(f"Prediction: {result}")
