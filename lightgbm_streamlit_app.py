@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 import joblib
 
-# Load the trained LR model
-model = joblib.load('lr_model.pkl')
+# Load the trained Logistic Regression pipeline (with scaler inside, if used)
+model = joblib.load("lr_model.pkl")
 
-# Define all features used in training
+# Define all features used in training (must match training order exactly)
 feature_cols = [
     'Chemotherapy', 'ER status measured by IHC', 'ER Status', 'HER2 status measured by SNP6', 'HER2 Status',
     'Hormone Therapy', 'Inferred Menopausal State', 'Radio Therapy', 'PR Status', 'Tumor Stage_1.0',
@@ -30,40 +30,47 @@ feature_cols = [
     'Mutation Count', 'Nottingham prognostic index', 'Tumor Size'
 ]
 
-st.title("10-Year Mortality Prediction App")
+# App title
+st.title("🔬 Breast Cancer 10-Year Mortality Prediction App")
 
-st.write("Fill in patient details below to predict 10-year mortality risk.")
+st.write("Provide patient details below to predict the 10-year mortality risk.")
 
-# Create input widgets for some key features
-age = st.slider('Age at Diagnosis', 20, 100, 50)
-lymph_nodes = st.slider('Lymph nodes examined positive', 0, 50, 1)
-mutation_count = st.slider('Mutation Count', 0, 500, 10)
-npi = st.slider('Nottingham Prognostic Index', 0.0, 10.0, 4.5)
-tumor_size = st.slider('Tumor Size', 0, 100, 20)
-chemo = st.selectbox('Chemotherapy', [0, 1])
-er_status = st.selectbox('ER Status', [0, 1])
-pr_status = st.selectbox('PR Status', [0, 1])
+# Collect input for key clinical features
+age = st.slider("Age at Diagnosis", 20, 100, 50)
+lymph_nodes = st.slider("Lymph nodes examined positive", 0, 50, 1)
+mutation_count = st.slider("Mutation Count", 0, 500, 10)
+npi = st.slider("Nottingham Prognostic Index", 0.0, 10.0, 4.5)
+tumor_size = st.slider("Tumor Size", 0, 100, 20)
+chemo = st.selectbox("Chemotherapy", [0, 1])
+er_status = st.selectbox("ER Status", [0, 1])
+pr_status = st.selectbox("PR Status", [0, 1])
 
-# Create a base input dictionary
+# Build input dictionary
 input_data = {
-    'Age at Diagnosis': age,
-    'Lymph nodes examined positive': lymph_nodes,
-    'Mutation Count': mutation_count,
-    'Nottingham prognostic index': npi,
-    'Tumor Size': tumor_size,
-    'Chemotherapy': chemo,
-    'ER Status': er_status,
-    'PR Status': pr_status
+    "Age at Diagnosis": age,
+    "Lymph nodes examined positive": lymph_nodes,
+    "Mutation Count": mutation_count,
+    "Nottingham prognostic index": npi,
+    "Tumor Size": tumor_size,
+    "Chemotherapy": chemo,
+    "ER Status": er_status,
+    "PR Status": pr_status,
 }
 
-# Fill the rest with 0
+# Fill missing features with 0
 for col in feature_cols:
     if col not in input_data:
         input_data[col] = 0
 
-# Convert to DataFrame in correct order
+# Convert to DataFrame with correct feature order
 input_df = pd.DataFrame([input_data])[feature_cols]
 
+# Prediction button
 if st.button("Predict"):
     prediction = model.predict(input_df)[0]
-    st.success(f"Predicted 10-Year Mortality: {'Yes' if prediction == 1 else 'No'}")
+    prob = model.predict_proba(input_df)[0][1]  # probability of mortality
+
+    if prediction == 1:
+        st.error(f"⚠️ Prediction: High risk of 10-year mortality\n\nProbability: {prob:.2f}")
+    else:
+        st.success(f"✅ Prediction: Likely survival beyond 10 years\n\nProbability: {prob:.2f}")
