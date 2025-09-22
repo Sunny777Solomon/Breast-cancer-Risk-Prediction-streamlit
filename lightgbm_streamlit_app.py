@@ -158,7 +158,7 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
 # GitHub CSV URL
-github_csv_url = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPOSITORY/main/Breast%20Cancer%20METABRIC.csv"
+github_csv_url = "https://raw.githubusercontent.com/Sunny777Solomon/Breast-cancer-Risk-Prediction-streamlit/refs/heads/main/Breast%20Cancer%20METABRIC.csv"
 
 @st.cache_data
 def load_data_from_github(url):
