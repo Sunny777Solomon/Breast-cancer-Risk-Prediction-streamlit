@@ -98,6 +98,29 @@ if model_error:
     st.error(f"⚠️ {model_error}")
     st.stop()
 
+# Get the actual feature names from the trained model
+@st.cache_resource
+def get_model_features():
+    try:
+        if hasattr(model, 'feature_names_in_'):
+            return model.feature_names_in_.tolist()
+        else:
+            # Fallback to predefined feature list if model doesn't have feature_names_in_
+            return feature_cols
+    except Exception as e:
+        st.error(f"Error getting model features: {e}")
+        return feature_cols
+
+# Get actual model features
+model_features = get_model_features()
+st.sidebar.info(f"Model expects {len(model_features)} features")
+
+# Debug information
+if st.sidebar.checkbox("🔍 Show Model Features (Debug)"):
+    st.sidebar.write("Expected features:")
+    for i, feat in enumerate(model_features):
+        st.sidebar.write(f"{i+1}. {feat}")
+
 # Define all features used in training
 feature_cols = [
     'Chemotherapy', 'ER status measured by IHC', 'ER Status', 'HER2 status measured by SNP6', 'HER2 Status',
@@ -178,6 +201,22 @@ def load_data_from_github(url):
     except Exception as e:
         return None, f"Error processing CSV: {str(e)}"
 
+def prepare_data_for_model(df, model_features):
+    """Prepare dataframe to match model's expected features"""
+    # Create a copy to avoid modifying original
+    df_model = df.copy()
+    
+    # Add missing columns with 0 values
+    for col in model_features:
+        if col not in df_model.columns:
+            df_model[col] = 0
+            st.sidebar.warning(f"⚠️ Missing column '{col}' - filled with 0")
+    
+    # Select only the features the model expects, in the correct order
+    df_model = df_model[model_features]
+    
+    return df_model
+
 # Tabs for different functionalities
 tab1, tab2, tab3 = st.tabs(["📊 Dataset Analysis", "👤 Single Patient Prediction", "📈 Model Insights"])
 
@@ -194,18 +233,23 @@ with tab1:
     else:
         st.success("✅ Dataset loaded successfully from GitHub!")
         
-        # Fill missing columns with 0
-        for col in feature_cols:
-            if col not in df.columns:
-                df[col] = 0
-
-        # Ensure column order
-        df_features = df[feature_cols]
+        # Show data info
+        st.info(f"📊 Loaded {len(df)} patients with {len(df.columns)} features")
+        
+        # Prepare data for model prediction
+        df_features = prepare_data_for_model(df, model_features)
+        
+        # Show feature matching info
+        st.success(f"✅ Data prepared: {len(df_features.columns)} features match model requirements")
 
         # Make predictions
         with st.spinner("🤖 Running predictions on dataset..."):
-            predictions = model.predict(df_features)
-            probabilities = model.predict_proba(df_features)
+            try:
+                predictions = model.predict(df_features)
+                probabilities = model.predict_proba(df_features)
+            except Exception as e:
+                st.error(f"❌ Prediction error: {str(e)}")
+                st.stop()
             
         df['Predicted 10-Year Mortality'] = ['High Risk' if p == 1 else 'Low Risk' for p in predictions]
         df['Mortality Probability'] = [prob[1] for prob in probabilities]
@@ -376,17 +420,19 @@ with tab2:
             'PR Status': pr_status
         }
 
-        # Fill the rest with 0
-        for col in feature_cols:
-            if col not in input_data:
-                input_data[col] = 0
-
-        input_df = pd.DataFrame([input_data])[feature_cols]
+        # Create DataFrame with all model features, filling missing ones with 0
+        input_df = pd.DataFrame([input_data])
+        input_df_prepared = prepare_data_for_model(input_df, model_features)
         
         # Make prediction
         with st.spinner("🤖 Analyzing patient data..."):
-            prediction = model.predict(input_df)[0]
-            probability = model.predict_proba(input_df)[0]
+            try:
+                prediction = model.predict(input_df_prepared)[0]
+                probability = model.predict_proba(input_df_prepared)[0]
+            except Exception as e:
+                st.error(f"❌ Prediction error: {str(e)}")
+                st.error("Please check that your input data matches the model's requirements.")
+                st.stop()
         
         # Display results with enhanced visualization
         st.markdown("---")
