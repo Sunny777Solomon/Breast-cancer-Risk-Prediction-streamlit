@@ -121,7 +121,21 @@ if st.sidebar.checkbox("🔍 Show Model Features (Debug)"):
     for i, feat in enumerate(model_features):
         st.sidebar.write(f"{i+1}. {feat}")
 
-# Define all features used in training
+# ACTUAL COLUMNS FROM YOUR METABRIC CSV FILE
+actual_csv_columns = [
+    'Patient ID', 'Age at Diagnosis', 'Type of Breast Surgery', 'Cancer Type',
+    'Cancer Type Detailed', 'Cellularity', 'Chemotherapy', 'Pam50 + Claudin-low subtype',
+    'Cohort', 'ER status measured by IHC', 'ER Status', 'Neoplasm Histologic Grade',
+    'HER2 status measured by SNP6', 'HER2 Status', 'Tumor Other Histologic Subtype',
+    'Hormone Therapy', 'Inferred Menopausal State', 'Integrative Cluster',
+    'Primary Tumor Laterality', 'Lymph nodes examined positive', 'Mutation Count',
+    'Nottingham prognostic index', 'Oncotree Code', 'Overall Survival (Months)',
+    'Overall Survival Status', 'PR Status', 'Radio Therapy', 'Relapse Free Status (Months)',
+    'Relapse Free Status', 'Sex', '3-Gene classifier subtype', 'Tumor Size',
+    'Tumor Stage', "Patient's Vital Status"
+]
+
+# Define all features used in training (your original model features)
 feature_cols = [
     'Chemotherapy', 'ER status measured by IHC', 'ER Status', 'HER2 status measured by SNP6', 'HER2 Status',
     'Hormone Therapy', 'Inferred Menopausal State', 'Radio Therapy', 'PR Status', 'Tumor Stage_1.0',
@@ -180,8 +194,8 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-# GitHub CSV URL
-github_csv_url = "https://raw.githubusercontent.com/Sunny777Solomon/Breast-cancer-Risk-Prediction-streamlit/refs/heads/main/Breast%20Cancer%20METABRIC.csv"
+# GitHub CSV URL - Using the encoded version
+github_csv_url = "https://raw.githubusercontent.com/Sunny777Solomon/Breast-cancer-Risk-Prediction-streamlit/refs/heads/main/METABRIC_encoded.csv"
 
 @st.cache_data
 def load_data_from_github(url):
@@ -202,18 +216,31 @@ def load_data_from_github(url):
         return None, f"Error processing CSV: {str(e)}"
 
 def prepare_data_for_model(df, model_features):
-    """Prepare dataframe to match model's expected features"""
+    """Prepare encoded dataframe to match model's expected features"""
     # Create a copy to avoid modifying original
     df_model = df.copy()
     
-    # Add missing columns with 0 values
+    # Since this is already encoded, we just need to ensure feature alignment
+    # Add missing columns with 0 values if any
+    missing_features = []
     for col in model_features:
         if col not in df_model.columns:
             df_model[col] = 0
-            st.sidebar.warning(f"⚠️ Missing column '{col}' - filled with 0")
+            missing_features.append(col)
+    
+    if missing_features:
+        st.sidebar.warning(f"⚠️ Added {len(missing_features)} missing features with default value 0")
+        if st.sidebar.checkbox("Show missing features"):
+            for feat in missing_features:
+                st.sidebar.text(f"• {feat}")
     
     # Select only the features the model expects, in the correct order
-    df_model = df_model[model_features]
+    try:
+        df_model = df_model[model_features]
+        st.sidebar.success(f"✅ Successfully aligned {len(model_features)} features")
+    except KeyError as e:
+        st.sidebar.error(f"❌ Feature alignment error: {e}")
+        return None
     
     return df_model
 
@@ -231,24 +258,37 @@ with tab1:
         st.error(f"❌ {error}")
         st.info("💡 Please check your GitHub URL and ensure the CSV file is publicly accessible.")
     else:
-        st.success("✅ Dataset loaded successfully from GitHub!")
+        st.success("✅ Encoded dataset loaded successfully from GitHub!")
         
         # Show data info
-        st.info(f"📊 Loaded {len(df)} patients with {len(df.columns)} features")
+        st.info(f"📊 Loaded {len(df)} patients with {len(df.columns)} encoded features")
+        
+        # Display first few columns to verify encoding
+        if st.checkbox("🔍 Preview encoded data"):
+            st.write("First 5 rows and 10 columns:")
+            st.dataframe(df.iloc[:5, :10])
         
         # Prepare data for model prediction
         df_features = prepare_data_for_model(df, model_features)
         
+        if df_features is None:
+            st.error("❌ Failed to prepare data for model. Please check feature alignment.")
+            st.stop()
+        
         # Show feature matching info
-        st.success(f"✅ Data prepared: {len(df_features.columns)} features match model requirements")
+        st.success(f"✅ Data prepared: {len(df_features.columns)} features aligned with model")
 
         # Make predictions
-        with st.spinner("🤖 Running predictions on dataset..."):
+        with st.spinner("🤖 Running predictions on encoded dataset..."):
             try:
                 predictions = model.predict(df_features)
                 probabilities = model.predict_proba(df_features)
+                
+                st.success(f"🎯 Predictions completed for {len(predictions)} patients")
+                
             except Exception as e:
                 st.error(f"❌ Prediction error: {str(e)}")
+                st.error("Model feature mismatch detected. Check the debug panel in sidebar.")
                 st.stop()
             
         df['Predicted 10-Year Mortality'] = ['High Risk' if p == 1 else 'Low Risk' for p in predictions]
@@ -353,6 +393,7 @@ with tab2:
     <div class="info-card">
         <h4>🔍 Patient Information</h4>
         <p>Enter the patient's clinical and pathological information below to get a personalized 10-year mortality risk assessment.</p>
+        <p><em>Note: This form uses simplified inputs. The encoded dataset contains many more features that will be set to default values.</em></p>
     </div>
     """, unsafe_allow_html=True)
     
