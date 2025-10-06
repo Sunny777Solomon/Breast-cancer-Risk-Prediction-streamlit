@@ -124,7 +124,7 @@ def prepare_data_for_model(df, model_features):
 # Header
 st.markdown("""
 <div class="main-header">
-    <h1>🏥 METABRIC 10-Year Mortality Prediction System</h1>
+    <h1>🏥 Breast Cancer Risk Prediction</h1>
     <p>Advanced Machine Learning for Breast Cancer Prognosis Assessment</p>
 </div>
 """, unsafe_allow_html=True)
@@ -285,7 +285,7 @@ if predict_button:
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; padding: 2rem; background: #f8f9fa; border-radius: 10px; margin-top: 2rem;">
-    <h4>🏥 METABRIC Mortality Prediction System</h4>
+    <h4>🏥 Breast Cancer Risk Prediction</h4>
     <p>⚠️ <strong>Medical Disclaimer:</strong> This tool is for research and educational purposes only. Always consult healthcare professionals for medical decisions.</p>
     <p><em>Powered by Machine Learning & Advanced Analytics</em></p>
 </div>
