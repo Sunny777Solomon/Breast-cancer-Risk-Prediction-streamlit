@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 
 # Page configuration
 st.set_page_config(
-    page_title="METABRIC Mortality Prediction",
+    page_title="Breast Cancer Risk Prediction",
     page_icon="🏥",
     layout="wide",
     initial_sidebar_state="collapsed"
