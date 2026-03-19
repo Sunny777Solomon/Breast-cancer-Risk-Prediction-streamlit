@@ -3,8 +3,6 @@ import pandas as pd
 import joblib
 import plotly.graph_objects as go
 import time
-from PIL import Image
-import base64
 
 # Page configuration
 st.set_page_config(
@@ -14,14 +12,47 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS for the elegant medical theme from HTML
+# Function to set background image
+def add_bg_from_local():
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: url("https://images.unsplash.com/photo-1579154204601-01588f822e49?q=80&w=2070&auto=format&fit=crop");
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+        }}
+        
+        /* Overlay to make content readable */
+        .stApp::before {{
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(253, 242, 248, 0.88);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            z-index: -1;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+# Call the function to add background
+add_bg_from_local()
+
+# Custom CSS for the elegant medical theme
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@300;400;500;600&display=swap');
     
     /* Global styles */
     .stApp {
-        background-image: linear-gradient(135deg, #fdf2f8 0%, #fbcfe8 100%);
         font-family: 'Inter', sans-serif;
     }
     
@@ -30,26 +61,43 @@ st.markdown("""
         letter-spacing: -0.5px;
     }
     
-    /* Navigation bar */
-    .navbar {
-        background: rgba(255, 255, 255, 0.85);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border-bottom: 1px solid #fbcfe8;
-        padding: 1.5rem 2rem;
-        position: sticky;
-        top: 0;
+    /* Navigation - subtle and top right */
+    .nav-container {
+        position: fixed;
+        top: 20px;
+        right: 30px;
         z-index: 1000;
-        margin-bottom: 2rem;
+        display: flex;
+        gap: 20px;
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(8px);
+        padding: 10px 20px;
+        border-radius: 50px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        border: 1px solid rgba(219, 39, 119, 0.2);
     }
     
-    .navbar-title {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: #db2777;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
+    .nav-btn {
+        background: transparent;
+        border: none;
+        font-size: 1rem;
+        font-weight: 500;
+        color: #831843;
+        cursor: pointer;
+        padding: 5px 15px;
+        border-radius: 25px;
+        transition: all 0.3s ease;
+        font-family: 'Inter', sans-serif;
+    }
+    
+    .nav-btn:hover {
+        background: rgba(219, 39, 119, 0.1);
+        color: #9d174d;
+    }
+    
+    .nav-btn.active {
+        background: #db2777;
+        color: white;
     }
     
     /* Cards and containers */
@@ -62,40 +110,41 @@ st.markdown("""
         backdrop-filter: blur(8px);
     }
     
-    /* Section titles */
+    /* Section titles - darker colors for visibility */
     .section-title {
-        color: #db2777;
+        color: #831843 !important;
         border-bottom: 2px solid #fbcfe8;
         padding-bottom: 0.75rem;
         margin-bottom: 1.5rem;
         font-family: 'Playfair Display', serif;
         font-size: 2rem;
-        font-weight: 600;
+        font-weight: 700;
     }
     
     /* Hero section */
     .hero-container {
         background: rgba(253, 242, 248, 0.88);
         backdrop-filter: blur(12px);
-        padding: 4rem 2rem;
+        padding: 3rem 2rem;
         border-radius: 2rem;
         text-align: center;
         margin: 2rem 0;
     }
     
     .hero-title {
-        font-size: 4rem;
+        font-size: 3.5rem;
         font-weight: 700;
-        color: #9d174d;
-        margin-bottom: 1.5rem;
+        color: #831843 !important;
+        margin-bottom: 1rem;
         line-height: 1.2;
+        text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.5);
     }
     
     .hero-subtitle {
-        font-size: 2rem;
-        color: #db2777;
+        font-size: 1.8rem;
+        color: #b91c6f !important;
         font-weight: 300;
-        margin-bottom: 3rem;
+        margin-bottom: 2rem;
     }
     
     /* Button styling */
@@ -138,6 +187,7 @@ st.markdown("""
         font-size: 3rem;
         font-weight: 700;
         margin: 1rem 0;
+        color: #1e1e1e;
     }
     
     /* Form styling */
@@ -145,6 +195,26 @@ st.markdown("""
         background: rgba(255, 255, 255, 0.92);
         border-radius: 1.5rem;
         padding: 2rem;
+    }
+    
+    /* Content text - darker for better readability */
+    .content-text {
+        line-height: 1.8;
+        font-size: 1.1rem;
+        color: #2d3748 !important;
+    }
+    
+    ul.content-text {
+        padding-left: 2rem;
+    }
+    
+    ul.content-text li {
+        margin-bottom: 0.75rem;
+        color: #2d3748;
+    }
+    
+    ul.content-text li strong {
+        color: #831843;
     }
     
     /* Footer */
@@ -157,30 +227,14 @@ st.markdown("""
         color: #4a4a4a;
     }
     
-    /* Info text styling */
-    .content-text {
-        line-height: 1.8;
-        font-size: 1.1rem;
-        color: #4a4a4a;
-    }
-    
-    ul.content-text {
-        padding-left: 2rem;
-    }
-    
-    ul.content-text li {
-        margin-bottom: 0.75rem;
-    }
-    
     /* Loading animation */
-    .loading-container {
-        background: rgba(0, 0, 0, 0.65);
-        backdrop-filter: blur(5px);
-    }
-    
-    /* Progress bar */
     .stProgress > div > div {
         background-color: #db2777;
+    }
+    
+    /* Spacing for content to account for fixed nav */
+    .content-wrapper {
+        margin-top: 80px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -241,58 +295,60 @@ feature_cols = [
 model_features = get_model_features()
 
 def prepare_data_for_model(df, model_features):
-    """Prepare encoded dataframe to match model's expected features"""
-    df_model = df.copy()
+    """Prepare encoded dataframe to match model's expected features EXACTLY"""
+    df_model = pd.DataFrame(0, index=df.index, columns=model_features)
     
-    # Add missing columns with 0 values if any
-    for col in model_features:
-        if col not in df_model.columns:
-            df_model[col] = 0
+    # Map the input features to the correct column names
+    feature_mapping = {
+        'Age at Diagnosis': 'Age at Diagnosis',
+        'Lymph nodes examined positive': 'Lymph nodes examined positive',
+        'Mutation Count': 'Mutation Count',
+        'Nottingham prognostic index': 'Nottingham prognostic index',
+        'Tumor Size': 'Tumor Size',
+        'Chemotherapy': 'Chemotherapy',
+        'ER Status': 'ER Status',
+        'PR Status': 'PR Status'
+    }
     
-    # Select only the features the model expects, in the correct order
-    df_model = df_model[model_features]
+    for input_col, model_col in feature_mapping.items():
+        if input_col in df.columns and model_col in df_model.columns:
+            df_model[model_col] = df[input_col].values
     
     return df_model
 
 # Initialize session state for navigation
 if 'page' not in st.session_state:
     st.session_state.page = 'home'
+if 'form_submitted' not in st.session_state:
+    st.session_state.form_submitted = False
+if 'prediction_result' not in st.session_state:
+    st.session_state.prediction_result = None
+if 'probability_result' not in st.session_state:
+    st.session_state.probability_result = None
+if 'form_data' not in st.session_state:
+    st.session_state.form_data = {}
 
-# Navigation functions
-def go_to_home():
-    st.session_state.page = 'home'
+# Navigation
+st.markdown("""
+<div class="nav-container">
+    <button class="nav-btn" onclick="window.location.href='?nav=home'">🏠 Home</button>
+    <button class="nav-btn" onclick="window.location.href='?nav=analyze'">🔬 Analyze</button>
+</div>
+""", unsafe_allow_html=True)
 
-def go_to_analyze():
-    st.session_state.page = 'analyze'
-
-# Navigation bar
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
-    st.markdown("""
-    <div class="navbar">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div class="navbar-title">
-                <i class="fas fa-ribbon" style="font-size: 2rem;"></i> Breastcare Analyzer
-            </div>
-            <div style="display: flex; gap: 2rem;">
-    """, unsafe_allow_html=True)
-    
-    nav_col1, nav_col2 = st.columns(2)
-    with nav_col1:
-        if st.button("🏠 Home", use_container_width=True):
-            go_to_home()
-    with nav_col2:
-        if st.button("🔬 Analyze Risk", use_container_width=True):
-            go_to_analyze()
-    
-    st.markdown("""
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+# Handle navigation via query params
+query_params = st.query_params
+if 'nav' in query_params:
+    if query_params['nav'] == 'home':
+        st.session_state.page = 'home'
+    elif query_params['nav'] == 'analyze':
+        st.session_state.page = 'analyze'
+        st.session_state.form_submitted = False
 
 # Home Page
 if st.session_state.page == 'home':
+    st.markdown('<div class="content-wrapper">', unsafe_allow_html=True)
+    
     st.markdown("""
     <div class="hero-container">
         <h1 class="hero-title">Breasts they could use your support</h1>
@@ -326,26 +382,23 @@ if st.session_state.page == 'home':
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         if st.button("🎗️ Start Your Risk Analysis", use_container_width=True):
-            go_to_analyze()
+            st.session_state.page = 'analyze'
+            st.rerun()
+    
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # Analyze Page
 elif st.session_state.page == 'analyze':
+    st.markdown('<div class="content-wrapper">', unsafe_allow_html=True)
+    
     st.markdown("""
-    <h2 style="font-family: 'Playfair Display', serif; font-size: 3rem; color: #9d174d; text-align: center; margin: 2rem 0;">
+    <h2 style="font-family: 'Playfair Display', serif; font-size: 3rem; color: #831843; text-align: center; margin: 2rem 0;">
         10-Year Mortality Risk Assessment
     </h2>
     """, unsafe_allow_html=True)
     
-    # Initialize session state for results
-    if 'show_results' not in st.session_state:
-        st.session_state.show_results = False
-    if 'prediction' not in st.session_state:
-        st.session_state.prediction = None
-    if 'probability' not in st.session_state:
-        st.session_state.probability = None
-    
     # Input form
-    if not st.session_state.show_results:
+    if not st.session_state.form_submitted:
         with st.form("patient_form"):
             st.markdown('<div class="form-container">', unsafe_allow_html=True)
             
@@ -395,8 +448,8 @@ elif st.session_state.page == 'analyze':
             submitted = st.form_submit_button("🔍 Analyze Patient Risk", use_container_width=True)
             
             if submitted:
-                # Build input dictionary
-                input_data = {
+                # Store form data
+                st.session_state.form_data = {
                     'Age at Diagnosis': age,
                     'Lymph nodes examined positive': lymph_nodes,
                     'Mutation Count': mutation_count,
@@ -408,12 +461,15 @@ elif st.session_state.page == 'analyze':
                 }
                 
                 # Create DataFrame with all model features
-                input_df = pd.DataFrame([input_data])
+                input_df = pd.DataFrame([st.session_state.form_data])
                 input_df_prepared = prepare_data_for_model(input_df, model_features)
+                
+                # Debug info (optional - can remove in production)
+                st.write("Model expects these features:", list(model_features[:10]) + ["..."])
+                st.write("Input shape:", input_df_prepared.shape)
                 
                 # Show loading animation
                 with st.spinner("🤖 Analyzing patient data..."):
-                    # Simulate progress for better UX
                     progress_bar = st.progress(0)
                     for i in range(100):
                         time.sleep(0.01)
@@ -423,20 +479,23 @@ elif st.session_state.page == 'analyze':
                         prediction = model.predict(input_df_prepared)[0]
                         probability = model.predict_proba(input_df_prepared)[0]
                         
-                        st.session_state.prediction = prediction
-                        st.session_state.probability = probability
-                        st.session_state.show_results = True
+                        st.session_state.prediction_result = prediction
+                        st.session_state.probability_result = probability
+                        st.session_state.form_submitted = True
                         st.rerun()
                         
                     except Exception as e:
                         st.error(f"❌ Prediction error: {str(e)}")
-                        st.error("Please check that your input data matches the model's requirements.")
+                        st.error("Feature mismatch. Debug info below:")
+                        st.write("Input features:", list(input_df_prepared.columns))
+                        st.write("Model features:", list(model_features))
     
     # Results display
     else:
-        prediction = st.session_state.prediction
-        probability = st.session_state.probability
+        prediction = st.session_state.prediction_result
+        probability = st.session_state.probability_result
         risk_score = probability[1] * 100
+        form_data = st.session_state.form_data
         
         # Risk result display
         if prediction == 1:
@@ -444,8 +503,8 @@ elif st.session_state.page == 'analyze':
             <div class="risk-high">
                 <h2 style="color: #ff4757; margin-bottom: 1rem;">⚠️ HIGH 10-Year Mortality Risk</h2>
                 <div class="risk-percentage">{risk_score:.1f}%</div>
-                <p style="font-size: 1.2rem;">Please consult a doctor immediately.</p>
-                <p style="margin-top: 1rem;">A {risk_score:.1f}% predicted risk indicates the importance of prompt medical evaluation and possible early intervention.</p>
+                <p style="font-size: 1.2rem; color: #2d3748;">Please consult a doctor immediately.</p>
+                <p style="margin-top: 1rem; color: #2d3748;">A {risk_score:.1f}% predicted risk indicates the importance of prompt medical evaluation and possible early intervention.</p>
             </div>
             """, unsafe_allow_html=True)
         else:
@@ -453,8 +512,8 @@ elif st.session_state.page == 'analyze':
             <div class="risk-low">
                 <h2 style="color: #2ed573; margin-bottom: 1rem;">✅ LOW 10-Year Mortality Risk</h2>
                 <div class="risk-percentage">{risk_score:.1f}%</div>
-                <p style="font-size: 1.2rem;">Keep going — you're doing wonderfully ❤️</p>
-                <p style="margin-top: 1rem;">Continue with regular screenings and a healthy lifestyle. This result is very encouraging.</p>
+                <p style="font-size: 1.2rem; color: #2d3748;">Keep going — you're doing wonderfully ❤️</p>
+                <p style="margin-top: 1rem; color: #2d3748;">Continue with regular screenings and a healthy lifestyle. This result is very encouraging.</p>
             </div>
             """, unsafe_allow_html=True)
         
@@ -463,9 +522,9 @@ elif st.session_state.page == 'analyze':
             mode="gauge+number",
             value=risk_score,
             domain={'x': [0, 1], 'y': [0, 1]},
-            title={'text': "10-Year Mortality Risk (%)", 'font': {'size': 24}},
+            title={'text': "10-Year Mortality Risk (%)", 'font': {'size': 24, 'color': '#831843'}},
             gauge={
-                'axis': {'range': [0, 100], 'tickwidth': 2},
+                'axis': {'range': [0, 100], 'tickwidth': 2, 'tickcolor': '#831843'},
                 'bar': {'color': "#db2777"},
                 'steps': [
                     {'range': [0, 25], 'color': "#a8edea"},
@@ -481,7 +540,7 @@ elif st.session_state.page == 'analyze':
             }
         ))
         
-        fig_gauge.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)', font={'color': "#4a4a4a"})
+        fig_gauge.update_layout(height=400, paper_bgcolor='rgba(0,0,0,0)', font={'color': "#831843"})
         st.plotly_chart(fig_gauge, use_container_width=True)
         
         # Patient summary
@@ -489,22 +548,24 @@ elif st.session_state.page == 'analyze':
         
         with col1:
             st.markdown("#### 📊 Patient Summary")
-            st.write(f"**Age:** {age} years")
-            st.write(f"**Tumor Size:** {tumor_size} mm")
-            st.write(f"**Positive Lymph Nodes:** {lymph_nodes}")
-            st.write(f"**Chemotherapy:** {'Yes' if chemo else 'No'}")
+            st.write(f"**Age:** {form_data['Age at Diagnosis']} years")
+            st.write(f"**Tumor Size:** {form_data['Tumor Size']} mm")
+            st.write(f"**Positive Lymph Nodes:** {form_data['Lymph nodes examined positive']}")
+            st.write(f"**Chemotherapy:** {'Yes' if form_data['Chemotherapy'] else 'No'}")
             
         with col2:
             st.markdown("#### 🔬 Biomarker Profile")
-            st.write(f"**ER Status:** {'Positive' if er_status else 'Negative'}")
-            st.write(f"**PR Status:** {'Positive' if pr_status else 'Negative'}")
-            st.write(f"**Mutation Count:** {mutation_count}")
-            st.write(f"**NPI Score:** {npi:.1f}")
+            st.write(f"**ER Status:** {'Positive' if form_data['ER Status'] else 'Negative'}")
+            st.write(f"**PR Status:** {'Positive' if form_data['PR Status'] else 'Negative'}")
+            st.write(f"**Mutation Count:** {form_data['Mutation Count']}")
+            st.write(f"**NPI Score:** {form_data['Nottingham prognostic index']:.1f}")
         
         # Analyze another button
         if st.button("🔄 Analyze Another Case", use_container_width=True):
-            st.session_state.show_results = False
+            st.session_state.form_submitted = False
             st.rerun()
+    
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # Footer
 st.markdown("""
