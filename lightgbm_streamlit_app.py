@@ -1,249 +1,540 @@
 import streamlit as st
-import joblib
 import pandas as pd
-import numpy as np
+import joblib
 import plotly.graph_objects as go
-from pathlib import Path
 
+# Page configuration
 st.set_page_config(
-    page_title="Breasts they could use your support",
-    page_icon="🎗️",
-    layout="wide",
+    page_title="Breast Cancer Risk Prediction",
+    page_icon="🏥",
+    layout="centered",
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS – pink theme, elegant fonts, subtle background
+# Professional CSS styling with medical theme
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@300;400;500;600&display=swap');
-
-    body {
-        font-family: 'Inter', sans-serif;
-        background: linear-gradient(135deg, #fdf2f8, #fae8f0);
-        background-size: cover;
-        color: #4a4a4a;
+    /* Import professional fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    /* Main container styling */
+    .stApp {
+        background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
-    h1, h2, h3 {
-        font-family: 'Playfair Display', serif;
-        color: #db2777;
+    
+    /* Header styling */
+    .main-header {
+        background: linear-gradient(135deg, #0066CC 0%, #004A99 100%);
+        padding: 3rem 2rem;
+        border-radius: 0 0 30px 30px;
+        color: white;
+        text-align: center;
+        margin: -1rem -1rem 3rem -1rem;
+        box-shadow: 0 10px 30px rgba(0, 102, 204, 0.15);
     }
-    .stApp > header {
-        background: rgba(253, 242, 248, 0.9);
-        backdrop-filter: blur(10px);
+    
+    .main-header h1 {
+        font-size: 2.5rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.5px;
     }
-    .main-block {
-        background: rgba(255, 255, 255, 0.92);
-        border-radius: 1.5rem;
-        padding: 2.5rem;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-        margin: 1rem auto;
-        max-width: 1100px;
+    
+    .main-header p {
+        font-size: 1.1rem;
+        opacity: 0.95;
+        font-weight: 300;
     }
-    .section-title {
-        border-bottom: 2px solid #fbcfe8;
-        padding-bottom: 0.6rem;
-        margin-bottom: 1.5rem;
+    
+    /* Card styling */
+    .info-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 16px;
+        margin: 2rem 0;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(0, 102, 204, 0.1);
     }
-    .btn-primary {
-        background: linear-gradient(135deg, #ec4899, #db2777) !important;
-        color: white !important;
-        border-radius: 999px !important;
-        padding: 1rem 3rem !important;
-        font-size: 1.3rem !important;
-        transition: all 0.3s;
+    
+    .info-card h4 {
+        color: #004A99;
+        font-weight: 600;
+        margin-bottom: 0.8rem;
+        font-size: 1.2rem;
     }
-    .btn-primary:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 25px rgba(236, 72, 153, 0.4) !important;
+    
+    .info-card p {
+        color: #495057;
+        line-height: 1.6;
+        font-size: 0.95rem;
     }
-    .result-high {
-        color: #dc2626;
-        font-size: 3.5rem;
-        font-weight: bold;
+    
+    /* Form section headers */
+    .form-section {
+        background: #f8f9fa;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        margin: 1.5rem 0;
+        border-left: 4px solid #0066CC;
     }
-    .result-low {
-        color: #059669;
-        font-size: 3.5rem;
-        font-weight: bold;
+    
+    .form-section h4 {
+        color: #004A99;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
     }
+    
+    /* Result cards */
+    .result-high-risk {
+        background: linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%);
+        padding: 2rem;
+        border-radius: 16px;
+        border-left: 5px solid #dc3545;
+        box-shadow: 0 4px 20px rgba(220, 53, 69, 0.1);
+        margin: 2rem 0;
+    }
+    
+    .result-low-risk {
+        background: linear-gradient(135deg, #f0fff4 0%, #dcffe4 100%);
+        padding: 2rem;
+        border-radius: 16px;
+        border-left: 5px solid #28a745;
+        box-shadow: 0 4px 20px rgba(40, 167, 69, 0.1);
+        margin: 2rem 0;
+    }
+    
+    .result-high-risk h3, .result-low-risk h3 {
+        margin-bottom: 1rem;
+        font-weight: 600;
+    }
+    
+    .result-high-risk h3 {
+        color: #dc3545;
+    }
+    
+    .result-low-risk h3 {
+        color: #28a745;
+    }
+    
+    .risk-score {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 1rem 0;
+        color: #212529;
+    }
+    
+    /* Patient summary styling */
+    .summary-section {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-top: 2rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
+    
+    .summary-section h4 {
+        color: #004A99;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .summary-item {
+        padding: 0.4rem 0;
+        color: #495057;
+        font-size: 0.95rem;
+    }
+    
+    .summary-item strong {
+        color: #212529;
+        font-weight: 500;
+    }
+    
+    /* Disclaimer styling */
+    .disclaimer {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 2rem 0;
+        color: #856404;
+    }
+    
+    .disclaimer h5 {
+        color: #856404;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Button styling */
+    .stButton > button {
+        background: linear-gradient(135deg, #0066CC 0%, #004A99 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-weight: 500;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 102, 204, 0.2);
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 102, 204, 0.3);
+    }
+    
+    /* Input field styling */
+    .stSlider > div > div > div > div {
+        background: #0066CC;
+    }
+    
+    .stSelectbox > div > div > select {
+        border-color: #e9ecef;
+        font-size: 0.95rem;
+    }
+    
+    /* Metric display */
+    .metric-display {
+        background: white;
+        padding: 1rem;
+        border-radius: 8px;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    
+    /* Hide Streamlit branding */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
-# Load model
+# Load the trained model
 @st.cache_resource
 def load_model():
     try:
-        model = joblib.load("rf.pkl")
-        return model
+        model = joblib.load('lr_model.pkl')
+        return model, None
+    except FileNotFoundError:
+        return None, "Model file 'lr_model.pkl' not found. Please ensure the model file is in the correct directory."
     except Exception as e:
-        st.error(f"Model loading failed: {e}")
-        st.stop()
+        return None, f"Error loading model: {str(e)}"
 
-model = load_model()
+model, model_error = load_model()
 
-# Features (same as your FastAPI version)
-FEATURES = [
-    {"key": "Age_at_Diagnosis", "label": "Age at Diagnosis (years)", "min": 20, "max": 100, "step": 0.1, "type": "number"},
-    {"key": "Tumor_Size", "label": "Tumor Size (mm)", "min": 0, "max": 150, "step": 0.1, "type": "number"},
-    {"key": "Lymph_nodes_examined_positive", "label": "Positive Lymph Nodes", "min": 0, "max": 50, "step": 1, "type": "number"},
-    {"key": "Mutation_Count", "label": "Mutation Count", "min": 0, "max": 200, "step": 1, "type": "number"},
-    {"key": "Nottingham_prognostic_index", "label": "Nottingham Prognostic Index", "min": 1.0, "max": 10.0, "step": 0.01, "type": "number"},
-    {"key": "Chemotherapy", "label": "Chemotherapy", "type": "select", "options": {0: "❌ No", 1: "✅ Yes"}},
-    {"key": "ER_Status", "label": "ER Status", "type": "select", "options": {0: "🔴 Negative", 1: "🟢 Positive"}},
-    {"key": "PR_Status", "label": "PR Status", "type": "select", "options": {0: "🔴 Negative", 1: "🟢 Positive"}},
-]
+if model_error:
+    st.error(f"⚠️ {model_error}")
+    st.stop()
 
-# Column mapping for model
-COLUMN_MAP = {
-    "Age_at_Diagnosis": "Age at Diagnosis",
-    "Tumor_Size": "Tumor Size",
-    "Lymph_nodes_examined_positive": "Lymph nodes examined positive",
-    "Mutation_Count": "Mutation Count",
-    "Nottingham_prognostic_index": "Nottingham prognostic index",
-    "Chemotherapy": "Chemotherapy",
-    "ER_Status": "ER Status",
-    "PR_Status": "PR Status",
-}
+# Get model features
+@st.cache_resource
+def get_model_features():
+    feature_cols = [
+        'Chemotherapy', 'ER status measured by IHC', 'ER Status', 'HER2 status measured by SNP6', 'HER2 Status',
+        'Hormone Therapy', 'Inferred Menopausal State', 'Radio Therapy', 'PR Status', 'Tumor Stage_1.0',
+        'Tumor Stage_2.0', 'Tumor Stage_3.0', 'Tumor Stage_4.0', 'Cancer Type_Breast Sarcoma',
+        'Type of Breast Surgery_Mastectomy', 'Cellularity_Low', 'Cellularity_Moderate',
+        'Pam50 + Claudin-low subtype_Her2', 'Pam50 + Claudin-low subtype_LumA',
+        'Pam50 + Claudin-low subtype_LumB', 'Pam50 + Claudin-low subtype_NC',
+        'Pam50 + Claudin-low subtype_Normal', 'Pam50 + Claudin-low subtype_claudin-low',
+        'Cancer Type Detailed_Breast Angiosarcoma', 'Cancer Type Detailed_Breast Invasive Ductal Carcinoma',
+        'Cancer Type Detailed_Breast Invasive Lobular Carcinoma', 'Cancer Type Detailed_Breast Invasive Mixed Mucinous Carcinoma',
+        'Cancer Type Detailed_Breast Mixed Ductal and Lobular Carcinoma', 'Cancer Type Detailed_Invasive Breast Carcinoma',
+        'Cancer Type Detailed_Metaplastic Breast Cancer', 'Neoplasm Histologic Grade_2.0',
+        'Neoplasm Histologic Grade_3.0', '3-Gene classifier subtype_ER+/HER2- Low Prolif',
+        '3-Gene classifier subtype_ER-/HER2-', '3-Gene classifier subtype_HER2+',
+        'Tumor Other Histologic Subtype_Lobular', 'Tumor Other Histologic Subtype_Medullary',
+        'Tumor Other Histologic Subtype_Metaplastic', 'Tumor Other Histologic Subtype_Mixed',
+        'Tumor Other Histologic Subtype_Mucinous', 'Tumor Other Histologic Subtype_Other',
+        'Tumor Other Histologic Subtype_Tubular/ cribriform', 'Primary Tumor Laterality_Right',
+        'Integrative Cluster_10', 'Integrative Cluster_2', 'Integrative Cluster_3', 'Integrative Cluster_4ER+',
+        'Integrative Cluster_4ER-', 'Integrative Cluster_5', 'Integrative Cluster_6', 'Integrative Cluster_7',
+        'Integrative Cluster_8', 'Integrative Cluster_9', 'Age at Diagnosis', 'Lymph nodes examined positive',
+        'Mutation Count', 'Nottingham prognostic index', 'Tumor Size'
+    ]
+    return feature_cols
 
-# Full model features (you can expand if needed)
-MODEL_FEATURES = list(COLUMN_MAP.values()) + [...]  # add all other features as 0 if needed
+model_features = get_model_features()
 
-def prepare_input(user_data):
-    df = pd.DataFrame([user_data])
-    df = df.rename(columns=COLUMN_MAP)
-    for col in MODEL_FEATURES:
-        if col not in df.columns:
-            df[col] = 0
-    return df[MODEL_FEATURES]
-
-# ──────────────────────────────────────── UI ────────────────────────────────────────
-
-st.markdown(
-    """
-    <div style="text-align:center; padding: 3rem 0 1.5rem;">
-        <h1 style="font-size: 4.2rem; margin:0;">Breasts they could use your support</h1>
-        <p style="font-size: 1.6rem; color: #db2777; margin-top: 0.8rem;">Early awareness saves lives.</p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-tab1, tab2 = st.tabs(["🏠 Home", "📊 Analyze Risk"])
-
-with tab1:
-    st.markdown("<div class='main-block'>", unsafe_allow_html=True)
-
-    st.markdown("<h2 class='section-title'>Understanding Breast Cancer</h2>", unsafe_allow_html=True)
-
-    st.markdown("""
-    Breast cancer is the most common cancer diagnosed in women and the second most common cause of death from cancer among women worldwide. The breasts are paired glands of variable size and density that lie superficial to the pectoralis major muscle. They contain milk-producing cells arranged in lobules; multiple lobules are aggregated into lobes with interspersed fat. Milk and other secretions are produced in acini and extruded through lactiferous ducts that exit at the nipple. Breasts are anchored to the underlying muscular fascia by Cooper ligaments, which support the breast. Breast cancer most commonly arises in the ductal epithelium (ie, ductal carcinoma) but can also develop in the breast lobules (ie, lobular carcinoma). Several risk factors for breast cancer have been well described. In Western countries, screening programs have succeeded in identifying most breast cancers through screening rather than due to symptoms. However, in much of the developing world, a breast mass or abnormal nipple discharge is often the presenting symptom. Breast cancer is diagnosed through physical examination, breast imaging, and tissue biopsy. Treatment options include surgery, chemotherapy, radiation, hormonal therapy, and, more recently, immunotherapy. Factors such as histology, stage, tumor markers, and genetic abnormalities guide individualized treatment decisions.
-    """)
-
-    st.markdown("<h3 class='section-title' style='margin-top:2rem;'>Breast Cancer Risk Factors</h3>", unsafe_allow_html=True)
-
-    st.markdown("""
-    Identifying factors associated with an increased incidence of breast cancer development is important in general health screening for women. Risk factors for breast cancer include:
-
-    - **Age**: The age-adjusted incidence of breast cancer continues to increase with the advancing age of the female population.
-    - **Gender**: Most breast cancers occur in women.
-    - **Personal history**: A history of cancer in one breast increases the likelihood of a second primary cancer in the contralateral breast.
-    - **Histologic**: Histologic abnormalities diagnosed by breast biopsy... (LCIS, proliferative changes with atypia).
-    - **Family history and genetic mutations**: First-degree relatives... BRCA1 and BRCA2...
-    - **Reproductive**: Early menarche, late first childbirth, nulliparity, late menopause.
-    - **Exogenous hormone use**: Oral contraceptives, hormone replacement therapy.
-    - **Other**: Radiation, obesity, alcohol, environmental exposures.
-    """)
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    if st.button("Start Your Risk Analysis →", type="primary", use_container_width=False):
-        st.switch_page("pages/analyze.py")  # if using multi-page, or just scroll / use session state
-
-with tab2:
-    st.markdown("<div class='main-block'>", unsafe_allow_html=True)
-    st.markdown("<h2 class='section-title'>10-Year Mortality Risk Assessment</h2>", unsafe_allow_html=True)
-
-    with st.form("patient_form"):
-        cols = st.columns(2)
-        user_input = {}
-
-        for i, f in enumerate(FEATURES):
-            with cols[i % 2]:
-                if f["type"] == "select":
-                    user_input[f["key"]] = st.selectbox(
-                        f["label"],
-                        options=list(f["options"].keys()),
-                        format_func=lambda x: f["options"][x],
-                        key=f["key"]
-                    )
-                else:
-                    user_input[f["key"]] = st.number_input(
-                        f["label"],
-                        min_value=f["min"],
-                        max_value=f["max"],
-                        step=f["step"],
-                        value=float((f["min"] + f["max"]) / 2),
-                        key=f["key"]
-                    )
-
-        analyze_btn = st.form_submit_button("Analyze Now", type="primary", use_container_width=True)
-
-    if analyze_btn:
-        with st.spinner("Analyzing your information..."):
-            # fake delay for animation feel
-            import time
-            progress_bar = st.progress(0)
-            for pct in range(0, 101, 5):
-                time.sleep(0.08)
-                progress_bar.progress(pct)
-
-            input_df = prepare_input(user_input)
-            prediction = model.predict(input_df)[0]
-            probability = model.predict_proba(input_df)[0][1] * 100
-            prob_str = f"{probability:.1f}%"
-
-        st.markdown("---")
-
-        if prediction == 1:
-            st.markdown(f"<p class='result-high'>HIGH 10-Year Mortality Risk</p><p style='font-size:4rem;'>{prob_str}</p>", unsafe_allow_html=True)
-            st.error("""
-            **Please consult a doctor immediately.**  
-            A high predicted risk means early intervention can still make a significant difference.  
-            Schedule an appointment with an oncologist as soon as possible.
-            """)
-        else:
-            st.markdown(f"<p class='result-low'>LOW 10-Year Mortality Risk</p><p style='font-size:4rem;'>{prob_str}</p>", unsafe_allow_html=True)
-            st.success("""
-            **Keep it up — you're doing wonderfully.**  
-            This is a very encouraging result. Continue regular screenings and healthy habits.
-            """)
-
-        # Gauge
-        fig = go.Figure(go.Indicator(
-            mode="gauge+number+delta",
-            value=probability,
-            domain={'x': [0, 1], 'y': [0, 1]},
-            title={'text': "10-Year Mortality Risk (%)"},
-            delta={'reference': 50},
-            gauge={
-                'axis': {'range': [0, 100]},
-                'bar': {'color': "#db2777"},
-                'steps': [
-                    {'range': [0, 25], 'color': "#d1fae5"},
-                    {'range': [25, 50], 'color': "#fef3c7"},
-                    {'range': [50, 75], 'color': "#fed7aa"},
-                    {'range': [75, 100], 'color': "#fecaca"}
-                ],
-                'threshold': {'line': {'color': "#dc2626", 'width': 4}, 'thickness': 0.75, 'value': 90}
-            }
-        ))
-        fig.update_layout(height=350, margin=dict(l=20, r=20, t=50, b=20))
-        st.plotly_chart(fig, use_container_width=True)
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
+# Header
 st.markdown("""
-<div style="text-align:center; padding:3rem 1rem; color:#6b7280; font-size:0.95rem;">
-    🎗️ Educational awareness tool only — not medical advice. Always consult a healthcare professional.
+<div class="main-header">
+    <h1>Breast Cancer Risk Prediction</h1>
+    <p>Advanced AI-Powered Clinical Decision Support System</p>
+</div>
+""", unsafe_allow_html=True)
+
+# Patient Information Card
+st.markdown("""
+<div class="info-card">
+    <h4>Patient Risk Assessment</h4>
+    <p>This clinical decision support tool uses advanced machine learning to assess 10-year mortality risk in breast cancer patients. 
+    Please enter the patient's clinical and pathological information below for a comprehensive risk evaluation.</p>
+</div>
+""", unsafe_allow_html=True)
+
+# Patient input form
+with st.form("patient_assessment_form"):
+    # Demographics Section
+    st.markdown("""
+    <div class="form-section">
+        <h4>Demographics & Tumor Characteristics</h4>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        age = st.slider(
+            'Age at Diagnosis (years)', 
+            20, 100, 50,
+            help="Patient's age at initial diagnosis"
+        )
+        
+        tumor_size = st.slider(
+            'Tumor Size (mm)', 
+            0, 100, 20,
+            help="Maximum tumor diameter"
+        )
+    
+    with col2:
+        lymph_nodes = st.slider(
+            'Positive Lymph Nodes', 
+            0, 50, 1,
+            help="Number of lymph nodes with metastasis"
+        )
+        
+        mutation_count = st.slider(
+            'Mutation Count', 
+            0, 500, 10,
+            help="Total genetic mutations detected"
+        )
+    
+    with col3:
+        npi = st.slider(
+            'Nottingham Prognostic Index', 
+            0.0, 10.0, 4.5, 0.1,
+            help="Combined prognostic score"
+        )
+        
+        tumor_stage = st.selectbox(
+            'Tumor Stage',
+            ['Stage 1', 'Stage 2', 'Stage 3', 'Stage 4'],
+            help="Clinical tumor stage"
+        )
+    
+    # Treatment Section
+    st.markdown("""
+    <div class="form-section">
+        <h4>Treatment & Biomarkers</h4>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col4, col5, col6, col7 = st.columns(4)
+    
+    with col4:
+        chemo = st.selectbox(
+            'Chemotherapy', 
+            ['No', 'Yes'],
+            help="Chemotherapy treatment status"
+        )
+    
+    with col5:
+        er_status = st.selectbox(
+            'ER Status', 
+            ['Negative', 'Positive'],
+            help="Estrogen receptor status"
+        )
+    
+    with col6:
+        pr_status = st.selectbox(
+            'PR Status', 
+            ['Negative', 'Positive'],
+            help="Progesterone receptor status"
+        )
+    
+    with col7:
+        her2_status = st.selectbox(
+            'HER2 Status',
+            ['Negative', 'Positive'],
+            help="HER2 receptor status"
+        )
+    
+    col8, col9, col10, col11 = st.columns(4)
+    
+    with col8:
+        hormone_therapy = st.selectbox(
+            'Hormone Therapy',
+            ['No', 'Yes'],
+            help="Hormone therapy treatment"
+        )
+    
+    with col9:
+        radio_therapy = st.selectbox(
+            'Radiotherapy',
+            ['No', 'Yes'],
+            help="Radiotherapy treatment"
+        )
+    
+    with col10:
+        surgery_type = st.selectbox(
+            'Surgery Type',
+            ['Lumpectomy', 'Mastectomy'],
+            help="Type of surgical intervention"
+        )
+    
+    with col11:
+        grade = st.selectbox(
+            'Histologic Grade',
+            ['Grade 1', 'Grade 2', 'Grade 3'],
+            help="Tumor differentiation grade"
+        )
+    
+    # Submit button
+    submitted = st.form_submit_button("Generate Risk Assessment", type="primary", use_container_width=True)
+
+# Process prediction when form is submitted
+if submitted:
+    # Convert inputs to model format
+    input_data = {
+        'Age at Diagnosis': age,
+        'Lymph nodes examined positive': lymph_nodes,
+        'Mutation Count': mutation_count,
+        'Nottingham prognostic index': npi,
+        'Tumor Size': tumor_size,
+        'Chemotherapy': 1 if chemo == 'Yes' else 0,
+        'ER Status': 1 if er_status == 'Positive' else 0,
+        'PR Status': 1 if pr_status == 'Positive' else 0,
+        'HER2 Status': 1 if her2_status == 'Positive' else 0,
+        'Hormone Therapy': 1 if hormone_therapy == 'Yes' else 0,
+        'Radio Therapy': 1 if radio_therapy == 'Yes' else 0,
+        'Type of Breast Surgery_Mastectomy': 1 if surgery_type == 'Mastectomy' else 0
+    }
+    
+    # Handle tumor stage encoding
+    for i in range(1, 5):
+        input_data[f'Tumor Stage_{i}.0'] = 1 if tumor_stage == f'Stage {i}' else 0
+    
+    # Handle grade encoding
+    if grade == 'Grade 2':
+        input_data['Neoplasm Histologic Grade_2.0'] = 1
+    elif grade == 'Grade 3':
+        input_data['Neoplasm Histologic Grade_3.0'] = 1
+    
+    # Fill remaining features with 0
+    for col in model_features:
+        if col not in input_data:
+            input_data[col] = 0
+    
+    # Create DataFrame with correct feature order
+    input_df = pd.DataFrame([input_data])[model_features]
+    
+    # Make prediction
+    with st.spinner("Analyzing patient data..."):
+        try:
+            prediction = model.predict(input_df)[0]
+            probability = model.predict_proba(input_df)[0]
+            risk_score = probability[1]
+            
+            # Display results
+            st.markdown("---")
+            
+            if prediction == 1:
+                st.markdown(f"""
+                <div class="result-high-risk">
+                    <h3>High Risk Assessment</h3>
+                    <div class="risk-score">{risk_score:.1%}</div>
+                    <p>The patient presents with a high predicted risk for 10-year mortality based on the clinical parameters provided. 
+                    Close monitoring and aggressive treatment strategies should be considered.</p>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="result-low-risk">
+                    <h3>Low Risk Assessment</h3>
+                    <div class="risk-score">{risk_score:.1%}</div>
+                    <p>The patient presents with a low predicted risk for 10-year mortality based on the clinical parameters provided. 
+                    Standard treatment protocols with regular follow-up are recommended.</p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            # Risk visualization gauge
+            fig = go.Figure(go.Indicator(
+                mode = "gauge+number",
+                value = risk_score * 100,
+                domain = {'x': [0, 1], 'y': [0, 1]},
+                title = {'text': "10-Year Mortality Risk", 'font': {'size': 20, 'color': '#004A99'}},
+                number = {'suffix': "%", 'font': {'size': 40, 'color': '#212529'}},
+                gauge = {
+                    'axis': {'range': [None, 100], 'tickwidth': 1, 'tickcolor': "#495057"},
+                    'bar': {'color': "#0066CC", 'thickness': 0.8},
+                    'bgcolor': "white",
+                    'borderwidth': 2,
+                    'bordercolor': "#dee2e6",
+                    'steps': [
+                        {'range': [0, 25], 'color': '#d4edda'},
+                        {'range': [25, 50], 'color': '#fff3cd'},
+                        {'range': [50, 75], 'color': '#f8d7da'},
+                        {'range': [75, 100], 'color': '#f5c6cb'}
+                    ],
+                    'threshold': {
+                        'line': {'color': "#dc3545", 'width': 4},
+                        'thickness': 0.75,
+                        'value': 50
+                    }
+                }
+            ))
+            
+            fig.update_layout(
+                height=350,
+                margin=dict(t=50, b=50, l=50, r=50),
+                paper_bgcolor="white",
+                font={'family': "Inter, sans-serif"}
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Patient Summary
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("""
+                <div class="summary-section">
+                    <h4>Clinical Parameters</h4>
+                    <div class="summary-item"><strong>Age:</strong> """ + str(age) + """ years</div>
+                    <div class="summary-item"><strong>Tumor Size:</strong> """ + str(tumor_size) + """ mm</div>
+                    <div class="summary-item"><strong>Positive Lymph Nodes:</strong> """ + str(lymph_nodes) + """</div>
+                    <div class="summary-item"><strong>NPI Score:</strong> """ + f"{npi:.1f}" + """</div>
+                    <div class="summary-item"><strong>Tumor Stage:</strong> """ + tumor_stage + """</div>
+                    <div class="summary-item"><strong>Histologic Grade:</strong> """ + grade + """</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col2:
+                st.markdown("""
+                <div class="summary-section">
+                    <h4>Treatment & Biomarkers</h4>
+                    <div class="summary-item"><strong>ER Status:</strong> """ + er_status + """</div>
+                    <div class="summary-item"><strong>PR Status:</strong> """ + pr_status + """</div>
+                    <div class="summary-item"><strong>HER2 Status:</strong> """ + her2_status + """</div>
+                    <div class="summary-item"><strong>Chemotherapy:</strong> """ + chemo + """</div>
+                    <div class="summary-item"><strong>Hormone Therapy:</strong> """ + hormone_therapy + """</div>
+                    <div class="summary-item"><strong>Radiotherapy:</strong> """ + radio_therapy + """</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+        except Exception as e:
+            st.error(f"Error generating prediction: {str(e)}")
+
+# Medical Disclaimer
+st.markdown("""
+<div class="disclaimer">
+    <h5>⚠️ Medical Disclaimer</h5>
+    <p>This prediction tool is designed for research and educational purposes only. It should not be used as the sole basis for clinical decision-making. 
+    All results must be interpreted by qualified healthcare professionals in conjunction with comprehensive clinical assessment, additional diagnostic tests, 
+    and individual patient factors. Always consult with oncology specialists for treatment planning and patient management.</p>
 </div>
 """, unsafe_allow_html=True)
