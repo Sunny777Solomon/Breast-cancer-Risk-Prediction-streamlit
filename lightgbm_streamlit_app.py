@@ -56,10 +56,10 @@ st.markdown("""
 @st.cache_resource
 def load_model():
     try:
-        model = joblib.load('rf_model.pkl')
+        model = joblib.load('rf.pkl')
         return model, None
     except FileNotFoundError:
-        return None, "Model file 'lr_model.pkl' not found. Please ensure the model file is in the correct directory."
+        return None, "Model file 'rf.pkl' not found. Please ensure the model file is in the correct directory."
     except Exception as e:
         return None, f"Error loading model: {str(e)}"
 
